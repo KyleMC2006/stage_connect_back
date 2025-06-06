@@ -63,3 +63,85 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 =======
 # stage_connect_back
 >>>>>>> 19cbf432ce51cf03b5bcd474be3f753eaa068e4c
+>>>>>>> # Nom du Projet Laravel
+
+Description courte de votre projet.
+
+## Prérequis
+
+- PHP >= 8.2
+- Composer
+- Node.js & NPM
+- MySQL/PostgreSQL
+
+## Installation
+
+1. Cloner le projet
+```bash
+git clone https://github.com/votre-username/nom-du-projet.git
+cd nom-du-projet
+```
+
+2. Installer les dépendances PHP
+```bash
+composer install
+```
+
+3. Installer les dépendances JavaScript
+```bash
+npm install
+```
+
+4. Configurer l'environnement
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+5. Configurer la base de données
+Éditez le fichier `.env` avec vos informations de base de données
+
+6. Exécuter les migrations
+```bash
+php artisan migrate
+```
+
+7. Compiler les assets (si nécessaire)
+```bash
+npm run build
+```
+
+## Lancement
+
+```bash
+php artisan serve
+```
+
+Le projet sera accessible sur http://localhost:8000
+
+## Fonctionnalités
+
+- Liste des principales fonctionnalités
+- Authentification
+- API REST
+- etc.
+
+## Technologies utilisées
+
+- Laravel 12
+- PHP 8.3
+- MySQL
+- Tailwind CSS (si applicable)
+- Vue.js/React (si applicable)
+
+## Contribution
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+## Licence
+
+Ce projet est sous licence MIT.
