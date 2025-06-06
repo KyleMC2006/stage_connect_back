@@ -19,7 +19,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost/5173','http://127.0.0.1/5173'],
+    'allowed_origins' => ['http://localhost/5173','http://127.0.0.1/5173''https://votre-frontend-render.onrender.com', // <<-- Si vous déployez le frontend sur Render aussi
+    'https://votre-frontend-personnalise.com', ],
 
     'allowed_origins_patterns' => [],
 
