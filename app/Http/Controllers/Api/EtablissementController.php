@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Etablissement;
@@ -13,42 +13,16 @@ class EtablissementController extends Controller
     // GET /api/etablissements
     public function index()
     {
-        $etablissements = Etablissement::with('user', 'ville', 'ecolefil')->get();
+        $etablissements = Etablissement::paginate(15);
         return response()->json($etablissements, 200);
     }
 
-    // POST /api/etablissements
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'nom_etablissement' => 'required|string|max:191',
-            'siteweb' => 'nullable|url',
-            'adresse' => 'required|string|max:191',
-            'ville_id' => 'required|exists:villes,id',
-            'numero_agrement' => 'required|string|unique:etablissements',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-        
-
-        $etablissement = Etablissement::create([
-            'user_id' => Auth::id(),
-            'nom_etablissement' => $request->nom_etablissement,
-            'siteweb' => $request->siteweb,
-            'adresse' => $request->adresse,
-            'ville_id' => $request->ville_id,
-            'numero_agrement' => $request->numero_agrement
-        ]);
-
-        return response()->json(['message' => 'Etablissement créé avec succès', 'etablissement' => $etablissement], 201);
-    }
+    
 
     // GET /api/etablissements/{id}
     public function show($id)
     {
-        $etablissement = Etablissement::with('user', 'ville', 'ecolefil')->find($id);
+        $etablissements = Etablissement::find($id);
 
         if (!$etablissement) {
             return response()->json(['message' => 'Etablissement non trouvé'], 404);
@@ -103,4 +77,72 @@ class EtablissementController extends Controller
 
         return response()->json(['message' => 'Etablissement supprimé avec succès'], 200);
     }
+s
+    public function gererFiliereAnnees(Request $request, $id)
+    {
+        $etablissement = Etablissement::find($id);
+
+        if (!$etablissement) {
+            return response()->json(['message' => 'Etablissement non trouvé'], 404);
+        }
+
+        // Vérifier que l'utilisateur authentifié est le propriétaire de cet établissement
+        if ($etablissement->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Non autorisé. Vous n\'êtes pas le propriétaire de cet établissement.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'filiere_id' => 'required|exists:filieres,id', 
+            'annee_ids' => 'required|array',              
+            'annee_ids.*' => 'exists:annees,id',          
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $filiereId = $request->filiere_id;
+        $anneeIds = $request->annee_ids;
+
+       
+        $etablissement->ecolefil()->syncWithoutDetaching([$filiereId]);
+
+        
+        $filiere = Filiere::find($filiereId);
+        
+        $filiere->filannee()->sync($anneeIds);
+
+        return response()->json([
+            'message' => 'Filière et années associées à l\'établissement avec succès.',
+            'filiere_id' => $filiereId,
+            'annees_associees' => $filiere->filannee()->get()
+        ], 200);
+    }
+
+    public function getFilieresAnnees($id)
+    {
+        $etablissement = Etablissement::find($id);
+
+        if (!$etablissement) {
+            return response()->json(['message' => 'Etablissement non trouvé'], 404);
+        }
+
+        // Vérifier que l'utilisateur authentifié est le propriétaire de cet établissement
+        if ($etablissement->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Non autorisé. Vous n\'êtes pas le propriétaire de cet établissement.'], 403);
+        }
+
+        // Charger les filières de cet établissement, et pour chaque filière, charger ses années
+        $etablissementWithFilieres = Etablissement::with('ecolefil.filannee')
+                                                ->where('id', $id)
+                                                ->first();
+
+
+
+        return response()->json([
+            'message' => 'Filières de l\'établissement avec années récupérées avec succès.',
+            'etablissement' => $etablissementWithFilieres
+        ], 200);
+    }
+
 }

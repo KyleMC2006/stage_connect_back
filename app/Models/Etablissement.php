@@ -34,4 +34,11 @@ class Etablissement extends Model
     public function ville(){  
         return $this->belongsTo(Ville::class);
     }
+
+    
+    public function partenariats()
+    {
+        return $this->hasMany(Partenariat::class);
+    }
+    
 }

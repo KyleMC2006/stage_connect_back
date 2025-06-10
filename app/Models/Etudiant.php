@@ -16,7 +16,9 @@ class Etudiant extends Model
         'CV',
         'parcours',
         'id_filiere',
-        'id_etablissement'
+        'id_etablissement',
+        'filannee_id',
+
 
     ];
 
@@ -44,6 +46,12 @@ class Etudiant extends Model
     {
         return $this->hasMany(Candidature::class);
     }
+
+    public function filannee()
+    {
+    return $this->belongsTo(FilAnnee::class);
+    }
+
 
     
 }

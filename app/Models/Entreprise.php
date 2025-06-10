@@ -42,6 +42,13 @@ class Entreprise extends Model
         return $this->belongsTo(Ville::class);
     }
 
+
+    
+    public function partenariats()
+    {
+        return $this->hasMany(Partenariat::class);
+    }
+    
     
     
 }

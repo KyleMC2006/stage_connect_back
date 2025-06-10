@@ -44,6 +44,7 @@ return [
         'client_email' => 'firebase-adminsdk-fbsvc@stage-connect-v2.iam.gserviceaccount.com',
         'client_id' => '105946584410254845898',
         'client_x509_cert_url' => 'https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40stage-connect-v2.iam.gserviceaccount.com',
+        'credentials' => env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase_credentials.json')),
     ],
 
     'google' => [

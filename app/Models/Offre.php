@@ -17,11 +17,14 @@ class Offre extends Model
         'duree_en_semaines', 
         'date_debut', 
         'statut'
+        'is_targeted',       
+        'visibility'
     ];
     
     protected $casts = [
         'date_expiration' => 'date',
         'date_debut' => 'date',
+        'is_targeted' => 'boolean',
     ];
     protected $table = 'offres';
     
@@ -46,9 +49,21 @@ class Offre extends Model
     }
     
     
-    public function scopeActive($query)
+    public function active($query)
     {
         return $query->where('statut', 'active')
                     ->where('date_expiration', '>=', now());
+    }
+
+    public function visibleToStudent($query, $etablissementId)
+    {
+        return $query->where('visibility', 'public')
+                     ->orWhere(function ($query) use ($etablissementId) {
+                         $query->where('visibility', 'partners_only')
+                               ->whereHas('entreprise.partenariats', function ($q) use ($etablissementId) {
+                                   $q->where('etablissement_id', $etablissementId)
+                                     ->where('statut', 'actif');
+                               });
+                     });
     }
 }

@@ -27,6 +27,7 @@ return new class extends Migration
             $table->foreignId('id_filiere')
             ->references('id')
             ->on('filieres');
+            $table->foreignId('filannee_id')->constrained()->onDelete('cascade');
             $table->string('matricule')->unique();
             $table->timestamps();
         });

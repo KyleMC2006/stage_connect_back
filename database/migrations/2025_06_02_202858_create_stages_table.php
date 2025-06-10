@@ -25,7 +25,7 @@ return new class extends Migration
                 ->onDelete('set null');
             $table->date('date_debut');
             $table->date('date_fin');
-            $table->enum('statut', ['en_cours', 'termine', 'annule', 'suspendu'])
+            $table->enum('statut', ['en_cours', 'termine', 'suspendu','en_attente'])
                 ->default('en_cours');
             $table->string('rapport_stage')->nullable(); // PDF
             $table->integer('note_stage')->nullable(); 

@@ -13,23 +13,24 @@ return [
     |
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
+    |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'register'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['http://localhost/5173','http://127.0.0.1/5173''https://votre-frontend-render.onrender.com', // <<-- Si vous déployez le frontend sur Render aussi
-    'https://votre-frontend-personnalise.com', ],
+    'allowed_origins' => [env('FRONTEND_URL'),
+    'http://localhost:5174','http://localhost:5173'],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => ['*'],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
 
     'exposed_headers' => [],
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];

@@ -1,39 +1,52 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\FireBaseAuthController;
 use App\Http\Controllers\Api\CandidatureController;
 use App\Http\Controllers\Api\OffreController;
 use App\Http\Controllers\Api\EtudiantController;
 use App\Http\Controllers\Api\EtablissementController;
 use App\Http\Controllers\Api\EntrepriseController;
 use App\Http\Controllers\Api\FiliereController;
+use App\Http\Controllers\API\AnneeController;
 use App\Http\Controllers\Api\DomaineController;
-
+use App\Http\Controllers\Api\NotifcationController;
 use App\Http\Controllers\Api\TuteurStageController;
-
+use App\Http\Controllers\Auth\FirebaseGoogleAuthController;
 use App\Http\Controllers\Api\UserController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ProfilCommuController;
+use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\CommentaireController;
+use App\Http\Controllers\Api\PartenariatController;
 
-use App\Http\Controllers\Auth\GoogleAuthController;
+
+
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-
-
-
- // Create this controller
-
-Route::prefix('auth')->group(function () {
-    Route::get('/google', [GoogleAuthController::class, 'redirectToGoogle']);
-    Route::get('/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
+Route::get('/test-cors', function() {
+    return response()->json([
+        'allowed_origins' => config('cors.allowed_origins'),
+        'frontend_url' => env('FRONTEND_URL')
+    ]);
 });
 
 
-Route::get('/firebase-login', [FirebaseAuthController::class, 'login']);
+
+
+ Route::post('/auth/google/firebase-callback', [FirebaseGoogleAuthController::class, 'handleFirebaseGoogleCallback']);
+
+ Route::post('/test1', function(){
+    return('test');
+});
+
+
+
+
 
 Route::get('/test-routes', function() {
     return response()->json(Route::getRoutes()->get());
@@ -42,10 +55,6 @@ Route::get('/test-routes', function() {
     Route::get('/ping', function () {
     return response()->json(['message' => 'pong']);
 });
-
-
-
-   
 
 
     Route::get('/etudiants',[EtudiantController::class,'index']);
@@ -57,20 +66,23 @@ Route::get('/test-routes', function() {
     Route::get('/etablissements',[EtablissementController::class,'index']);
     Route::get('/etablissements/{id}',[EtablissementController::class,'show']);
 
+        
+    Route::get('/villes', [FiliereController::class,'index']);
+    Route::get('/domaines', [DomaineController::class, 'index']);
 
-Route::middleware('auth:sanctum')->group(function () {
 
-    
+    ///ROUTES PROTEGES
+Route::middleware('auth:sanctum')->group(function (){
 
-    // Étape 2 Login
-    Route::post('/select-role', [FirebaseAuthController::class, 'selectRole']);
+    Route::post('/user/set-role', [UserController::class, 'setRole']);
 
-    // Étape 3 Login
-    Route::post('/complete-profile', [FirebaseAuthController::class, 'completeProfile']);
+   
+    Route::post('/user/complete-profile/{role}', [UserController::class, 'completeProfile']);
 
-    // Étape 4 Login
-    Route::post('/logout', [FirebaseAuthController::class, 'logout']);
-    
+ 
+    Route::get('/user/profile', [UserController::class, 'getProfile']);
+
+
 
     Route::get('/profile', [UserController::class, 'profile']);
     Route::post('/profile', [UserController::class, 'updateProfile']);
@@ -79,55 +91,69 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Etudiant
 
-    Route::post('/etudiants', [EtudiantController::class, 'store']);
+    
     Route::put('/etudiants/{id}', [EtudiantController::class, 'update']);
     Route::delete('/etudiants/{id}', [EtudiantController::class, 'destroy']);
-    
-    Route::post('/candidatures', [CandidatureController::class, 'store']);
-    Route::get('/candidatures',[CandidatureController::class,'index']);
-    Route::get('/candidatures/{id}',[CandidatureController::class,'show']);
-    Route::put('/candidatures/{id}',[CandidatureController::class,'update']);
-    Route::delete('/candidatures/{id}',[CandidatureController::class,'destroy']);
 
-    
-    
-    //Entreprise
-    
-    Route::post('/entreprises',[EntrepriseController::class,'store']);
     Route::put('/entreprises/{id}',[EntrepriseController::class,'update']);
     Route::delete('/entreprises/{id}',[EntrepriseController::class,'destroy']);
 
 
-        //ListeOffre
-    Route::get('/offres', [OffreController::class,'index']);
-    Route::post('/offres',[OffreController::class,'store']);
-    Route::get('/offres/{id}', [OffreController::class,'show']);
-    Route::put('/offres/{id}', [OffreController::class,'update']);
-    Route::delete('/offres/{id}', [OffreController::class,'destroy']);
-    
-    
 
-    //Etablissements
-
-    Route::post('/etablissements',[EtablissementController::class,'store']);
     Route::put('/etablissements/{id}',[EtablissementController::class,'update']);
     Route::delete('/etablissements/{id}',[EtablissementController::class,'destroy']);
-    Route::post('/etablissements/{id}/filieres', function (Request $request, $id) {
-        $etablissement = Etablissement::findOrFail($id);
+    Route::put('/etablissements/{id}/filieres/sync', [EtablissementController::class, 'syncFilieres']);
+    Route::post('/etablissements/{id}/filieres/attach', [EtablissementController::class, 'attachFilieres']);
 
-        if ($etablissement->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Non autorisé'], 403);
-        }
 
-        $validated = $request->validate([
-            'filieres' => 'required|array',
-            'filieres.*' => 'exists:filieres,id',
-        ]);
 
-        $etablissement->ecolefil()->sync($validated['filieres']);
+    // Récupérer les filières d'un établissement avec leurs années
+    Route::get('/etablissements/{id}/indexFiliereAnnees', [EtablissementController::class, 'getFilieresAnnees']);
 
-        return response()->json(['message' => 'Filières mises à jour']);
-    });
+    // Gérer l'association d'une filière et de ses années pour un établissement
+    Route::post('/etablissements/{id}/gererFilere1nnees', [EtablissementController::class, 'gererFiliereAnnees']);
+
+
+    Route::post('/filieres/{id}/annees/attach', [FiliereController::class, 'attachAnnees']);
+    Route::post('/filieres/{id}/annees/detach', [FiliereController::class, 'detachAnnees']);
+    Route::put('/filieres/{id}/annees/sync', [FiliereController::class, 'syncAnnees'])
+
+ //Filere et annnées
+    Route::post('/filieres', [FiliereController::class, 'store']);
+    
+    
+     //  LES CANDIDATURES TCHIAA
+    Route::post('/candidatures', [CandidatureController::class, 'store']); 
+    Route::get('/candidatures', [CandidatureController::class, 'index']); 
+    Route::get('/candidatures/{id}', [CandidatureController::class, 'show']); 
+
+    
+    Route::post('/candidatures/{id}/accepter-entreprise', [CandidatureController::class, 'accepterParEntreprise']);
+    Route::post('/candidatures/{id}/refuser-entreprise', [CandidatureController::class, 'refuserParEntreprise']);
+    Route::post('/candidatures/{id}/confirmer-etudiant', [CandidatureController::class, 'confirmerParEtudiant']);
+    Route::post('/candidatures/{id}/desister-etudiant', [CandidatureController::class, 'desisterParEtudiant']);
+    Route::post('/candidatures/{id}/valider-etablissement', [CandidatureController::class, 'validerParEtablissement']);
+
+    Route::delete('/candidatures/{id}', [CandidatureController::class, 'destroy']); 
+
+   
+
+//Offres
+
+    Route::get('/offres', [OffreController::class, 'index']); // offres actives
+    Route::get('/offres/{id}', [OffreController::class, 'show'])
+
+    Route::post('/offres', [OffreController::class, 'store']); 
+    Route::put('/offres/{id}', [OffreController::class, 'update']); 
+    Route::delete('/offres/{id}', [OffreController::class, 'destroy']); 
+    Route::get('/mes offres', [OffreController::class, 'mesOffres']); // Pour les entreprises
+
+
+        //  NOTIFICATIONS 
+    Route::get('/notifications', [NotificationController::class, 'index']); 
+    Route::get('/notifications/{id}', [NotificationController::class, 'show']); 
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
+
 
 
     Route::get('/filieres', [FiliereController::class, 'index']);
@@ -148,14 +174,95 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/tuteur/{id}', [TuteurStageController::class, 'update']);
     Route::delete('/tuteur/{id}', [TuteurStageController::class, 'destroy']);
 
+
+    //stages
+
+     
+        Route::get('/stages', [StageController::class, 'index']);
+        Route::post('/stages', [StageController::class, 'store']);
+        Route::get('/stages/{id}', [StageController::class, 'show']);
+        Route::put('/stages/{id}', [StageController::class, 'update']);
+        Route::delete('/stages/{id}', [StageController::class, 'destroy']);
+        Route::get('/stages/{id}/rapport/download', [StageController::class, 'downloadRapport']);
+
+//messages 
+
+    Route::prefix('messages')->group(function () {
+        //  /api/messages (liste des conversations)
+        Route::get('/', [MessageController::class, 'index']);
+
+        //  /api/messages (envoyer un nouveau message)
+        Route::post('/', [MessageController::class, 'store']);
+
+        // GET /api/messages/conversation/{id} (récupérer les messages d'une conversation)
+        // Le paramètre {id} sera l'ID de l'autre utilisateur dans la conversation
+        Route::get('/conversation/{id}', [MessageController::class, 'getConversation']);
+
+        // PUT /api/messages/{id}/mark-as-read (marquer un message spécifique comme lu)
+        // Le paramètre {id} sera l'ID du message à marquer comme lu
+        Route::put('/{id}/mark-as-read', [MessageController::class, 'markAsRead']);
+
+
+        // DELETE /api/messages/{id} (supprimer un message spécifique)
+        Route::delete('/{id}', [MessageController::class, 'destroy']);
+
  
-    
+});
 
 
+//likes et ProfilsCommus
 
-    
-    Route::get('/villes', [FiliereController::class,'index']);
-    Route::get('/domaines', [DomaineController::class, 'index']);
+
+    Route::prefix('profils-commu')->group(function () {
+        
+         // GET /api/profils-commu (liste des posts communautaires)
+        Route::get('/', [ProfilCommuController::class, 'index'])->withoutMiddleware('auth:sanctum');
+
+        // POST /api/profils-commu (créer un nouveau post)
+        Route::post('/', [ProfilCommuController::class, 'store']);
+
+        // GET /api/profils-commu/{id} (afficher un post spécifique)
+        Route::get('/{profilCommu}', [ProfilCommuController::class, 'show'])->withoutMiddleware('auth:sanctum');
+
+
+        // POST /api/profils-commu/{id}/like (pour ajouter un like)
+        Route::post('/{profilCommu}/like', [ProfilCommuController::class, 'ajoutLike']);
+
+        // POST /api/profils-commu/{id}/unlike (pour retirer un like)
+        Route::post('/{profilCommu}/unlike', [ProfilCommuController::class, 'retirerLike']);
+    });
+
+    //Commentaires
+
+    // Routes pour les Commentaires sous les Profils Commu
+        Route::prefix('{profilCommu}/commentaires')->group(function () {
+            // GET /api/profils-commu/{profilCommu}/commentaires (liste les commentaires pour un post)
+            Route::get('/', [CommentaireController::class, 'index'])->withoutMiddleware('auth:sanctum');
+
+            // POST /api/profils-commu/{profilCommu}/commentaires (ajoute un commentaire à un post)
+            Route::post('/', [CommentaireController::class, 'store']);
+        });
+ 
+
+    Route::prefix('commentaires')->group(function () {
+        // PUT /api/commentaires/{commentaire} (met à jour un commentaire)
+        Route::put('/{commentaire}', [CommentaireController::class, 'update']);
+
+
+        // DELETE /api/commentaires/{commentaire} (supprime un commentaire)
+        Route::delete('/{commentaire}', [CommentaireController::class, 'destroy']);
+    });
+
+    //Partenariats
+
+    Route::prefix('partenariats')->group(function () {
+        Route::get('/', [PartenariatController::class, 'index']); // Liste des partenariats
+        Route::post('/', [PartenariatController::class, 'store']); // Envoyer une demande de partenariat 
+        Route::get('/{partenariat}', [PartenariatController::class, 'show']); // Voir les détails d'un partenariat spécifique
+        Route::put('/{partenariat}', [PartenariatController::class, 'update']); // Mettre à jour un partenariat (accepter/refuser par l'Entreprise)
+        Route::delete('/{partenariat}', [PartenariatController::class, 'destroy']); // Supprimer un partenariat
+    });
+
 
 });
 

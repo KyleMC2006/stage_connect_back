@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class ProfilCommu extends Model
 {
     use HasFactory;
-    protected $fillable = ['likes'];
+    protected $fillable = ['likes','user_id'];
 
     protected $table = 'profil_commus';
 

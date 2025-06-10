@@ -24,7 +24,7 @@ class User extends Authenticatable
         'password',
         'description',
         'photo',
-        'google_id',
+        'firebase_uid',
         'couverture', 
         'role', 
         'is_active',
@@ -85,13 +85,7 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'destinataire_id');
     }
 
-    public function role(){
-        if($this->etudiant) return 'etudiant';
-        if($this->etablissement) return 'etablissement';
-        if($this->entreprise) return 'entreprise';
-        return null;
-    }
-
+    
     public function notifications(){
         return $this->hasMany(Notification::class);
     }

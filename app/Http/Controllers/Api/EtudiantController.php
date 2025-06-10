@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Etudiant;
@@ -13,58 +13,21 @@ class EtudiantController extends Controller
     // Liste tous les étudiants
     public function index()
     {
-        $etudiants = Etudiant::with(['user', 'filiere', 'etablissement'])->get();
+        $etudiants = Etudiant::paginate(15);
         return response()->json($etudiants);
     }
 
     // Affiche un étudiant
     public function show($id)
     {
-        $etudiant = Etudiant::with(['user', 'filiere', 'etablissement'])->find($id);
+        $etudiant = Etudiant::find($id);
         if (!$etudiant) {
             return response()->json(['message' => 'Étudiant non trouvé'], 404);
         }
         return response()->json($etudiant);
     }
 
-    // Crée un profil étudiant (après login Firebase)
-    public function store(Request $request)
-    {
-        $request->validate([
-            'matricule' => 'required|string|unique:etudiants',
-            'projets' => 'nullable|text',
-            'competences' => 'nullable|text',
-            'CV' => 'nullable|file',
-            'parcours' => 'nullable|text',
-            'id_filiere' => 'required|exists:filieres,id',
-            'id_etablissement' => 'required|exists:etablissements,id',
-        ]);
-
-        $user = Auth::user();
-
-        if (!$user || $user->role !== 'etudiant') {
-            return response()->json(['message' => 'Non autorisé.'], 403);
-        }
-
-        // Upload CV 
-        $cvPath = null;
-        if ($request->hasFile('CV')) {
-            $cvPath = $request->file('CV')->store('cvs', 'public');
-        }
-
-        $etudiant = Etudiant::create([
-            'user_id' => $user->id,
-            'matricule' => $request->matricule,
-            'projets' => $request->projets,
-            'competences' => $request->competences,
-            'CV' => $cvPath,
-            'parcours' => $request->parcours,
-            'id_filiere' => $request->id_filiere,
-            'id_etablissement' => $request->id_etablissement,
-        ]);
-
-        return response()->json($etudiant, 201);
-    }
+    
 
     // Modifier un profil étudiant
     public function update(Request $request, $id)
@@ -80,13 +43,13 @@ class EtudiantController extends Controller
     }
 
     $request->validate([
-        'matricule' => 'sometimes|string|unique:etudiants,matricule,' . $id,
         'projets' => 'nullable|string',
         'competences' => 'nullable|string',
-        'CV' => 'nullable|file',
+        'CV' => 'nullable|file|mimes:pdf|max:2048',
         'parcours' => 'nullable|string',
         'id_filiere' => 'sometimes|exists:filieres,id',
         'id_etablissement' => 'sometimes|exists:etablissements,id',
+        'filannee_id' => 'sometimes|exists:filannee,id',
     ]);
 
     if ($request->hasFile('CV')) {
