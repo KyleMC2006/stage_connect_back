@@ -10,11 +10,17 @@ use Illuminate\Support\Facades\Validator;
 
 class EtablissementController extends Controller
 {
+
+    /**
+     
+     * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
+     */
     // GET /api/etablissements
     public function index()
     {
-        $etablissements = Etablissement::paginate(15);
-        return response()->json($etablissements, 200);
+        $etablissements = Etablissement::all();
+        return response()->json($etablissements);
     }
 
     
@@ -77,7 +83,7 @@ class EtablissementController extends Controller
 
         return response()->json(['message' => 'Etablissement supprimé avec succès'], 200);
     }
-s
+
     public function gererFiliereAnnees(Request $request, $id)
     {
         $etablissement = Etablissement::find($id);

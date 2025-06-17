@@ -9,11 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EtudiantController extends Controller
+
 {
+    /**
+     
+     * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
+     */
     // Liste tous les étudiants
     public function index()
     {
-        $etudiants = Etudiant::paginate(15);
+        $etudiants = Etudiant::all();
         return response()->json($etudiants);
     }
 
@@ -47,8 +53,6 @@ class EtudiantController extends Controller
         'competences' => 'nullable|string',
         'CV' => 'nullable|file|mimes:pdf|max:2048',
         'parcours' => 'nullable|string',
-        'id_filiere' => 'sometimes|exists:filieres,id',
-        'id_etablissement' => 'sometimes|exists:etablissements,id',
         'filannee_id' => 'sometimes|exists:filannee,id',
     ]);
 

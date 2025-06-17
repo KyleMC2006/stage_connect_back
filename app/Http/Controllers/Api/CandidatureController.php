@@ -112,7 +112,7 @@ class CandidatureController extends Controller
                 return response()->json(['message' => 'Accès non autorisé pour ce rôle.'], 403);
         }
 
-        $candidatures = $query->paginate(15);
+        $candidatures = $query->get();
 
         return response()->json($candidatures, 200);
     }
@@ -250,8 +250,8 @@ class CandidatureController extends Controller
             return response()->json(['message' => 'Non autorisé à effectuer cette action.'], 403);
         }
 
-        if ($candidature->statut !== 'en_attente_confirmation_etudiant') {
-            return response()->json(['message' => 'La candidature n\'est pas dans le statut "en_attente_confirmation_etudiant".'], 400);
+        if ($candidature->statut !== 'acceptee') {
+            return response()->json(['message' => 'La candidature n\'est pas dans le statut "acceptee".'], 400);
         }
 
         
@@ -259,7 +259,7 @@ class CandidatureController extends Controller
                                         ->whereIn('statut', ['confirmee_etudiant', 'en_attente_validation_etablissement', 'validee_etablissement'])
                                         ->where('id', '!=', $candidature->id)
                                         ->exists();
-        if ($hasConfirmedOther) {
+        if ($Autresconfirmations) {
             return response()->json(['message' => 'Vous avez déjà confirmé une autre candidature ou en avez une en attente de validation.'], 400);
         }
 
@@ -309,7 +309,7 @@ class CandidatureController extends Controller
         }
 
         
-        if (in_array($candidature->statut, ['validee_etablissement', 'refusee', 'desistement_etudiant', 'desistement_automatique'])) {
+        if (in_array($candidature->statut, ['validee_etablissement', 'refusee', 'desistement_etudiant'])) {
             return response()->json(['message' => 'Cette candidature ne peut plus être désistée manuellement ou est déjà désistée/refusée.'], 400);
         }
 
@@ -324,6 +324,7 @@ class CandidatureController extends Controller
     
         $candidature->update([
             'statut' => 'desistement_etudiant',
+            'justificatif_desistement' => $request->justificatif_desistement,
         ]);
 
         Notification::create([
@@ -344,7 +345,7 @@ class CandidatureController extends Controller
 
     /**
      * L'établissement valide (ou refuse) le choix d'un étudiant.
-     * Statut de : `en_attente_validation_etablissement` vers `validee_etablissement` (ou `desistement_automatique` si refus).
+     * Statut de : `en_attente_validation_etablissement` vers `validee_etablissement` (ou `'refusee_etablissement'` si refus).
      * Si validation réussie, création du `Stage`.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -365,9 +366,7 @@ class CandidatureController extends Controller
             return response()->json(['message' => 'Non autorisé à effectuer cette action.'], 403);
         }
 
-        if ($candidature->statut !== 'en_attente_validation_etablissement') {
-            return response()->json(['message' => 'La candidature n\'est pas dans le statut "en_attente_validation_etablissement".'], 400);
-        }
+       
 
         $validator = Validator::make($request->all(), [
             'action' => 'required|in:valider,refuser', // L'établissement peut valider ou refuser
@@ -378,6 +377,10 @@ class CandidatureController extends Controller
         }
 
         if ($request->action === 'valider') {
+
+             if ($candidature->statut !== 'en_attente_validation_etablissement') {
+                return response()->json(['message' => 'La candidature doit être en statut "en_attente_validation_etablissement" pour être validée.'], 400);
+            }
             $candidature->update([
                 'statut' => 'validee_etablissement',
                 'date_validation_etablissement' => Carbon::now(),
@@ -409,8 +412,14 @@ class CandidatureController extends Controller
             return response()->json(['message' => 'Candidature validée par l\'établissement. Un stage a été créé.', 'candidature' => $candidature, 'stage' => $stage], 200);
 
         } elseif ($request->action === 'refuser') {
+
+            if ($candidature->statut !== 'desistement_etudiant') {
+                return response()->json(['message' => 'La candidature doit être en statut  "desistement_etudiant" pour être refusée par l\'établissement.'], 400);
+            }
+
+
             $candidature->update([
-                'statut' => 'desistement', 
+                'statut' => 'refusee_etablissement', 
                 'date_validation_etablissement' => Carbon::now(),
             ]);
 
@@ -432,14 +441,7 @@ class CandidatureController extends Controller
     }
 
 
-    /**
-     * Remove the specified resource from storage.
-     * Supprime une candidature.
-     * Cette action devrait être limitée et si possible utiliser des soft deletes.
-     *
-     * @param  int  $id L'ID de la candidature à supprimer.
-     * @return \Illuminate\Http\JsonResponse
-     */
+    
     public function destroy($id)
     {
         $candidature = Candidature::find($id);
@@ -468,6 +470,33 @@ class CandidatureController extends Controller
 
         return response()->json(['message' => 'Candidature supprimée avec succès'], 200);
     }
+    
 
+    public function getStatistics()
+    {
+        $user = Auth::user();
+
+        
+        if ($user->role !== 'etudiant' || !$user->etudiant) {
+            return response()->json(['message' => 'Accès refusé. Seuls les étudiants peuvent obtenir ces statistiques d\'offres.'], 403);
+        }
+
+        $etudiantId = $user->etudiant->id;
+        $response_data = [];
+
+        // Base de la requête pour les candidatures de l'étudiant
+        $baseCandidatureQuery = Candidature::where('etudiant_id', $etudiantId);
+
+        $response_data['offres_par_statut_candidature'] = [
+            'total_offres_postulees' => $baseCandidatureQuery->count(),
+            'en_attente' => (clone $baseCandidatureQuery)->where('statut', 'en_attente')->count(),
+            'acceptees' => (clone $baseCandidatureQuery)->where('statut', 'acceptee')->count(),
+            'refusees' => (clone $baseCandidatureQuery)->where('statut', 'refusee')->count(),
+         ];
+
+        $response_data['message'] = 'Statistiques des offres basées sur vos candidatures.';
+
+        return response()->json($response_data, 200);
+    }
    
 }

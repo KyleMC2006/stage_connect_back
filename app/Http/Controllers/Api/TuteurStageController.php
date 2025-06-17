@@ -1,6 +1,5 @@
 <?php
 
-<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -16,6 +15,7 @@ class TuteurStageController extends Controller
     /**
      
      * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
      */
     public function index()
     {

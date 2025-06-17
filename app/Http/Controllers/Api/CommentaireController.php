@@ -1,6 +1,5 @@
 <?php
 
-<?php
 
 namespace App\Http\Controllers\API;
 
@@ -13,7 +12,11 @@ use Illuminate\Support\Facades\Validator;
 
 class CommentaireController extends Controller
 {
-
+    /**
+     
+     * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
+     */
 
     public function index(ProfilCommu $profilCommu)
     {

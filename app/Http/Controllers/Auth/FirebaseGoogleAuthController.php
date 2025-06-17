@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\ProfilCommu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Api\ProfilCommuController;
 
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Exception\Auth\InvalidToken;
@@ -14,9 +16,7 @@ use Kreait\Firebase\Exception\Auth\InvalidToken;
 class FirebaseGoogleAuthController extends Controller
 {
     /**
-     * Handles the callback from the frontend with the Firebase ID Token.
-     * Verifies the token and manages user authentication and provides JSON response.
-     *
+*
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -31,12 +31,15 @@ class FirebaseGoogleAuthController extends Controller
                 'message' => 'Token d\'authentification Firebase manquant.',
             ], 400); // Bad Request
         }
-
+        
         try {
-            $factory = (new Factory)->withServiceAccount(storage_path('app/firebase_credentials.json'));
+            $firebaseCredentialsPath = base_path(env('FIREBASE_CREDENTIALS_PATH'));
+
+            $factory = (new Factory)->withServiceAccount($firebaseCredentialsPath);
             $auth = $factory->createAuth();
 
             $verifiedIdToken = $auth->verifyIdToken($idTokenString);
+
 
             $uid = $verifiedIdToken->claims()->get('sub');
             $email = $verifiedIdToken->claims()->get('email');
@@ -53,7 +56,7 @@ class FirebaseGoogleAuthController extends Controller
                     'code' => 'email_not_available'
                 ], 400); // Bad Request
             }
-
+            
             $user = User::updateOrCreate(
                 [
                     'email' => $email,
@@ -63,17 +66,40 @@ class FirebaseGoogleAuthController extends Controller
                     'google_id' => null,
                     'firebase_uid' => $uid,
                     'password' => null,
+                    
                 ]
             );
+
+            if (!$user->profilCommu) {
+                ProfilCommu::create([
+                    'user_id' => $user->id,
+                    'likes' => 0, // Initialize with 0 likes or a default value
+                ]);
+                Log::info('ProfilCommu created for user ID: ' . $user->id);
+            } else {
+                Log::info('ProfilCommu already exists for user ID: ' . $user->id);
+            }
+
+            $user->update(['en_ligne' => true]);
+            Log::info('Statut en ligne mis à jour pour l\'utilisateur ID: ' . $user->id);
 
             Log::info('Utilisateur Laravel créé/mis à jour: ID ' . $user->id . ', Email: ' . $user->email . ', Rôle: ' . ($user->role ?? 'N/A'));
 
             Auth::login($user);
+            
+            Log::info('Après Auth::login(): Auth::check() = ' . (Auth::check() ? 'true' : 'false'));
+            if (Auth::check()) {
+                Log::info('Après Auth::login(): Utilisateur authentifié (ID: ' . Auth::id() . ', Email: ' . Auth::user()->email . ')');
+            } else {
+                Log::warning('Après Auth::login(): Utilisateur non authentifié malgré l\'appel à Auth::login().');
+            }
+            Log::info('Objet $user passé à Auth::login(): ', ['type' => get_class($user), 'id' => $user->id ?? 'null']);
+
 
             $token = $user->createToken('auth_token')->plainTextToken;
             Log::info('Sanctum token généré pour utilisateur ' . $user->id);
 
-            $nextStepPath = '/profile'; // Default path if all is good
+            $nextStepPath = '/profile'; 
 
             if (is_null($user->role)) {
                 $nextStepPath = '/select-role';
@@ -98,15 +124,16 @@ class FirebaseGoogleAuthController extends Controller
                 if (!$profileExists) {
                     $nextStepPath = '/complete-profile/' . $user->role;
                 } else {
-                    $nextStepPath = '/profil/' . $user->role;
+                    $nextStepPath =   $user->role .'-dashboard/';
                 }
             }
+            
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Authentification réussie.',
                 'token' => $token,
-                'user' => $user->toArray(), // Convert user model to array for JSON
+                'user' => $user->toArray(), 
                 'next_step' => $nextStepPath
             ], 200); // OK
 
@@ -125,5 +152,22 @@ class FirebaseGoogleAuthController extends Controller
                 'code' => '500 serveur interne'
             ], 500); // Internal Server Error
         }
+    }
+
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user) {
+
+            $user->update(['en_ligne' => false]);
+            Log::info('Statut en ligne mis à jour à false pour l\'utilisateur ID: ' . $user->id);
+
+            $request->user()->currentAccessToken()->delete();
+
+            return response()->json(['message' => 'Déconnexion réussie.'], 200);
+        }
+
+        return response()->json(['message' => 'Aucun utilisateur authentifié à déconnecter.'], 401);
     }
 }

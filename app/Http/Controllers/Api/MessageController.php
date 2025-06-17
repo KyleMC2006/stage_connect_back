@@ -1,6 +1,5 @@
 <?php
 
-<?php
 
 namespace App\Http\Controllers\API;
 
@@ -18,6 +17,7 @@ class MessageController extends Controller
     /**
 
      * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
      */
     public function index()
     {

@@ -10,7 +10,8 @@ class FilAnnee extends Model
     use HasFactory;
     protected $fillable = [
         'id_fil', 
-        'id_annee'
+        'id_annee',
+        'etablissement_id',
     ];
     
     protected $table = 'filannee';
@@ -23,5 +24,10 @@ class FilAnnee extends Model
     public function annee()
     {
         return $this->belongsTo(Annee::class, 'id_annee');
+    }
+
+    public function etablissement()
+    {
+        return $this->belongsTo(Etablissement::class, 'etablissement_id');
     }
 }

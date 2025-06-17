@@ -10,10 +10,15 @@ use Illuminate\Support\Facades\Validator;
 
 class EntrepriseController extends Controller
 {
+    /**
+     
+     * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
+     */
     // Affiche la liste des entreprises
     public function index()
     {
-        $entreprises = Entreprise::paginate(15);
+        $entreprises = Entreprise::all();
         return response()->json($entreprises, 200);
     }
 

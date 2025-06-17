@@ -8,21 +8,23 @@ use App\Http\Controllers\Api\OffreController;
 use App\Http\Controllers\Api\EtudiantController;
 use App\Http\Controllers\Api\EtablissementController;
 use App\Http\Controllers\Api\EntrepriseController;
+use App\Http\Controllers\Api\AnneeController;
 use App\Http\Controllers\Api\FiliereController;
-use App\Http\Controllers\API\AnneeController;
+use App\Http\Controllers\Api\VilleController;
 use App\Http\Controllers\Api\DomaineController;
-use App\Http\Controllers\Api\NotifcationController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\TuteurStageController;
 use App\Http\Controllers\Auth\FirebaseGoogleAuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfilCommuController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\StageController;
 use App\Http\Controllers\Api\CommentaireController;
 use App\Http\Controllers\Api\PartenariatController;
 
 
 
-
+// JUSTE DES TESTS OUBLIEES !!!!
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -36,17 +38,20 @@ Route::get('/test-cors', function() {
 });
 
 
-
+// FIREBASE AUTHEN OUBLIE
 
  Route::post('/auth/google/firebase-callback', [FirebaseGoogleAuthController::class, 'handleFirebaseGoogleCallback']);
 
+
+// FONCTION QUI RECUPERE LES INFOS DE N'IMPORTE QUI POUR (VOIR DETAILS PROFILS)
+ Route::get('/users/{user}/profile', [UserController::class, 'showUserProfile']);
  Route::post('/test1', function(){
     return('test');
 });
 
 
 
-
+// TOUJOURS DES TESTS
 
 Route::get('/test-routes', function() {
     return response()->json(Route::getRoutes()->get());
@@ -57,6 +62,9 @@ Route::get('/test-routes', function() {
 });
 
 
+
+// LES INDEX SONT LA POUR RECUPERER LA LISTE DE TOUTES LES ENTITES PAR ROLE
+// LES SHOW(ID) C4EST POUR RECUPEPR LES ELEMENTS D'UNE ENTITE SUIVANT SONID (PROBABLEMENT PEU UTILES)
     Route::get('/etudiants',[EtudiantController::class,'index']);
     Route::get('/etudiants/{id}',[EtudiantController::class,'show']);
 
@@ -67,58 +75,69 @@ Route::get('/test-routes', function() {
     Route::get('/etablissements/{id}',[EtablissementController::class,'show']);
 
         
-    Route::get('/villes', [FiliereController::class,'index']);
+    Route::get('/villes', [VilleController::class,'index']);
     Route::get('/domaines', [DomaineController::class, 'index']);
+    Route::get('/filieres', [FiliereController::class, 'index']);
+    Route::get('/annees', [AnneeController::class, 'index']);
 
 
     ///ROUTES PROTEGES
 Route::middleware('auth:sanctum')->group(function (){
 
+    // --- NOUVEAU : Route de déconnexion ---
+    Route::post('/logout', [UserController::class, 'logout']);
+
     Route::post('/user/set-role', [UserController::class, 'setRole']);
 
-   
+
+    // RECUPERER PHOTO , COUVERTURE ET DESC D'UN USER AVEC LES INFOS DE SATABLE DE ROLE SPECIFIQUE
+    Route::get('/user/getProfile', [UserController::class, 'getUserProfile']);
+
+   //COMPLETE PROFIL
     Route::post('/user/complete-profile/{role}', [UserController::class, 'completeProfile']);
 
  
-    Route::get('/user/profile', [UserController::class, 'getProfile']);
+//MODIFIER PHOTO COUVERTURE ET DESC 
+
+    Route::post('/photo-update', [UserController::class, 'updatePhotos']);
+    Route::post('/couverture-update', [UserController::class, 'updateCouverture']);
+    Route::post('/description-update', [UserController::class, 'updateDescription']);
 
 
 
-    Route::get('/profile', [UserController::class, 'profile']);
-    Route::post('/profile', [UserController::class, 'updateProfile']);
 
-    
-
-    //Etudiant
-
-    
+   
+    //Update infos etudiant
     Route::put('/etudiants/{id}', [EtudiantController::class, 'update']);
     Route::delete('/etudiants/{id}', [EtudiantController::class, 'destroy']);
 
+    //Update infos entreprise
     Route::put('/entreprises/{id}',[EntrepriseController::class,'update']);
     Route::delete('/entreprises/{id}',[EntrepriseController::class,'destroy']);
 
 
-
+    //Update infos etablissements
     Route::put('/etablissements/{id}',[EtablissementController::class,'update']);
     Route::delete('/etablissements/{id}',[EtablissementController::class,'destroy']);
-    Route::put('/etablissements/{id}/filieres/sync', [EtablissementController::class, 'syncFilieres']);
-    Route::post('/etablissements/{id}/filieres/attach', [EtablissementController::class, 'attachFilieres']);
 
+    
+
+  
 
 
     // Récupérer les filières d'un établissement avec leurs années
     Route::get('/etablissements/{id}/indexFiliereAnnees', [EtablissementController::class, 'getFilieresAnnees']);
 
     // Gérer l'association d'une filière et de ses années pour un établissement
-    Route::post('/etablissements/{id}/gererFilere1nnees', [EtablissementController::class, 'gererFiliereAnnees']);
+    Route::post('/etablissements/{id}/gererFilereAnnees', [EtablissementController::class, 'gererFiliereAnnees']);
 
-
+//SYNCHRONISER FILIERE
     Route::post('/filieres/{id}/annees/attach', [FiliereController::class, 'attachAnnees']);
-    Route::post('/filieres/{id}/annees/detach', [FiliereController::class, 'detachAnnees']);
-    Route::put('/filieres/{id}/annees/sync', [FiliereController::class, 'syncAnnees'])
+    Route::post('/filieres/{id}/sync-annees', [FiliereController::class, 'syncAnnees']);
 
- //Filere et annnées
+    Route::get('/fil-annees/filter-by-filiere/{filiereId}/etablissement/{etablissementId}', [FiliereController::class, 'filterByFiliereAndEtablissement']);
+
+ //Créer
     Route::post('/filieres', [FiliereController::class, 'store']);
     
     
@@ -127,6 +146,9 @@ Route::middleware('auth:sanctum')->group(function (){
     Route::get('/candidatures', [CandidatureController::class, 'index']); 
     Route::get('/candidatures/{id}', [CandidatureController::class, 'show']); 
 
+    //Annne
+    Route::post('/annees', [AnneeController::class, 'store']); 
+    
     
     Route::post('/candidatures/{id}/accepter-entreprise', [CandidatureController::class, 'accepterParEntreprise']);
     Route::post('/candidatures/{id}/refuser-entreprise', [CandidatureController::class, 'refuserParEntreprise']);
@@ -136,17 +158,21 @@ Route::middleware('auth:sanctum')->group(function (){
 
     Route::delete('/candidatures/{id}', [CandidatureController::class, 'destroy']); 
 
+    Route::get('/candidatures/statistics', [OffreController::class, 'getStatistics']);
+
    
 
 //Offres
 
     Route::get('/offres', [OffreController::class, 'index']); // offres actives
-    Route::get('/offres/{id}', [OffreController::class, 'show'])
+    Route::get('/offres/{id}', [OffreController::class, 'show']);
 
     Route::post('/offres', [OffreController::class, 'store']); 
     Route::put('/offres/{id}', [OffreController::class, 'update']); 
     Route::delete('/offres/{id}', [OffreController::class, 'destroy']); 
-    Route::get('/mes offres', [OffreController::class, 'mesOffres']); // Pour les entreprises
+    Route::get('/mes-offres', [OffreController::class, 'mesOffres']); // Pour les entreprises
+    
+    Route::get('/get-offer-statistics', [OffreController::class, 'getStatistics']);
 
 
         //  NOTIFICATIONS 
@@ -156,9 +182,8 @@ Route::middleware('auth:sanctum')->group(function (){
 
 
 
-    Route::get('/filieres', [FiliereController::class, 'index']);
+    
     Route::get('/filieres/{id}', [FiliereController::class, 'show']);
-    Route::post('/filieres', [FiliereController::class, 'store']);
     Route::put('/filieres/{id}', [FiliereController::class, 'update']);
     Route::delete('/filieres/{id}', [FiliereController::class, 'destroy']);
 
@@ -179,7 +204,6 @@ Route::middleware('auth:sanctum')->group(function (){
 
      
         Route::get('/stages', [StageController::class, 'index']);
-        Route::post('/stages', [StageController::class, 'store']);
         Route::get('/stages/{id}', [StageController::class, 'show']);
         Route::put('/stages/{id}', [StageController::class, 'update']);
         Route::delete('/stages/{id}', [StageController::class, 'destroy']);
@@ -218,8 +242,7 @@ Route::middleware('auth:sanctum')->group(function (){
          // GET /api/profils-commu (liste des posts communautaires)
         Route::get('/', [ProfilCommuController::class, 'index'])->withoutMiddleware('auth:sanctum');
 
-        // POST /api/profils-commu (créer un nouveau post)
-        Route::post('/', [ProfilCommuController::class, 'store']);
+
 
         // GET /api/profils-commu/{id} (afficher un post spécifique)
         Route::get('/{profilCommu}', [ProfilCommuController::class, 'show'])->withoutMiddleware('auth:sanctum');

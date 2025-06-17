@@ -19,7 +19,7 @@ class CreatePartenariatsTable extends Migration
             $table->foreignId('etablissement_id')->constrained('etablissements')->onDelete('cascade');
             $table->date('date_debut');
             $table->date('date_fin')->nullable();
-            $table->enum('statut', ['en_attente', 'actif', 'termine', 'suspendu'])->default('en_attente');
+            $table->enum('statut', ['en_attente', 'actif', 'termine', 'suspendu','inactif'])->default('en_attente');
             $table->timestamps();
         });
     }

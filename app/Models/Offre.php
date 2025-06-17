@@ -16,7 +16,7 @@ class Offre extends Model
         'date_expiration', 
         'duree_en_semaines', 
         'date_debut', 
-        'statut'
+        'statut',
         'is_targeted',       
         'visibility'
     ];

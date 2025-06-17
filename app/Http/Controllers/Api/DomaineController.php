@@ -12,6 +12,7 @@ class DomaineController extends Controller
     /**
 
      * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
      */
     public function index()
     {

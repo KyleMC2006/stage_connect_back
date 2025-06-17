@@ -1,7 +1,5 @@
 <?php
 
-<?php
-
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
@@ -22,6 +20,7 @@ class StageController extends Controller
     /**
 
      * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
      */
     public function index()
     {

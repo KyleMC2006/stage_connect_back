@@ -1,6 +1,6 @@
 <?php
 
-<?php
+
 
 namespace App\Http\Controllers\API;
 
@@ -10,8 +10,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
-class ProfilCommusController extends Controller
+class ProfilCommuController extends Controller
 {
+    /**
+
+     * @return \Illuminate\Http\JsonResponse
+     *  @param  \Illuminate\Http\Request  $request
+     */
     public function __construct()
     {
         // Les utilisateurs non authentifiés peuvent voir les posts, mais pas les créer, liker ou supprimer.
@@ -35,9 +40,7 @@ class ProfilCommusController extends Controller
     public function store(Request $request)
     {
         
-        $validator = Validator::make($request->all(), [
-            'content' => 'required|string|max:1000', // Nous assumons l'existence d'un champ 'content'
-        ]);
+       
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);

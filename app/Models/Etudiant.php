@@ -35,7 +35,7 @@ class Etudiant extends Model
     }
 
     public function filiere(){
-        return $this->belongsTo(Filiere::class);
+        return $this->belongsTo(Filiere::class, 'id_filiere');
     }
     public function stages()
     {

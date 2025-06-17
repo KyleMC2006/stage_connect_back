@@ -25,9 +25,9 @@ return [
 
     'allowed_origins_patterns' => ['*'],
 
-    'allowed_headers' => ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With'],
+    'allowed_headers' => ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With','Set-Cookie'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['*'],
 
     'max_age' => 0,
 
