@@ -10,6 +10,7 @@ use App\Models\Candidature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class OffreController extends Controller
 {
@@ -64,6 +65,13 @@ class OffreController extends Controller
             return response()->json(['message' => 'Profil entreprise non complet.'], 400);
         }
 
+        $today = Carbon::today();
+
+        
+        Offre::where('date_expiration', '<', $today)
+             ->where('statut', '!=', 'expiree') 
+             ->update(['statut' => 'expiree']);
+
         // Récupère toutes les offres de cette entreprise
         $offres = Offre::where('entreprise_id', $entreprise->id)
                        ->with('domaine')->get();
@@ -73,8 +81,16 @@ class OffreController extends Controller
  
     public function index(Request $request)
     {
+
         $user = Auth::user();
-        $query = Offre::with('entreprise', 'domaine');
+        $today = Carbon::today();
+
+        
+        Offre::where('date_expiration', '<', $today)
+             ->where('statut', '!=', 'expiree') 
+             ->update(['statut' => 'expiree']);
+             
+        $query = Offre::with('entreprise.user', 'domaine');
 
         // Si l'utilisateur est un étudiant, filtrer les offres en fonction des partenariats
         if ($user->role === 'etudiant' && $user->etudiant) {
@@ -105,8 +121,9 @@ class OffreController extends Controller
 
     public function show(int $id)
     {
+        
         // 1. Récupérer l'offre spécifique
-        $offre = Offre::find($id);
+        $offre = Offre::with('entreprise','domaine')->find($id);
 
         if (!$offre) {
             return response()->json(['message' => 'Offre non trouvée.'], 404);
@@ -116,8 +133,7 @@ class OffreController extends Controller
         
         $nombreCandidatures = Candidature::where('offre_id', $offre->id)->count();
 
-        // 3. Vous pouvez ensuite retourner ces informations dans une réponse JSON,
-        // les passer à une vue, ou les utiliser comme nécessaire.
+
         return response()->json([
             'offre' => $offre, // L'objet offre complet
             'nombre_candidatures' => $nombreCandidatures, // Le compte que vous avez récupéré
@@ -167,6 +183,7 @@ class OffreController extends Controller
     }
 
 
+    
     
 
     public function update(Request $request, Offre $offre)

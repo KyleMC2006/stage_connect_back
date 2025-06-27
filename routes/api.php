@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\FiliereController;
 use App\Http\Controllers\Api\VilleController;
 use App\Http\Controllers\Api\DomaineController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\TuteurStageController;
 use App\Http\Controllers\Auth\FirebaseGoogleAuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfilCommuController;
@@ -38,13 +37,14 @@ Route::get('/test-cors', function() {
 });
 
 
-// FIREBASE AUTHEN OUBLIE
+
 
  Route::post('/auth/google/firebase-callback', [FirebaseGoogleAuthController::class, 'handleFirebaseGoogleCallback']);
 
 
 // FONCTION QUI RECUPERE LES INFOS DE N'IMPORTE QUI POUR (VOIR DETAILS PROFILS)
- Route::get('/users/{user}/profile', [UserController::class, 'showUserProfile']);
+Route::get('/users/{id}/profile', [UserController::class, 'showUserProfile']);
+
  Route::post('/test1', function(){
     return('test');
 });
@@ -140,26 +140,24 @@ Route::middleware('auth:sanctum')->group(function (){
  //Créer
     Route::post('/filieres', [FiliereController::class, 'store']);
     
+    //Annne
+    Route::post('/annees', [AnneeController::class, 'store']); 
     
      //  LES CANDIDATURES TCHIAA
     Route::post('/candidatures', [CandidatureController::class, 'store']); 
     Route::get('/candidatures', [CandidatureController::class, 'index']); 
     Route::get('/candidatures/{id}', [CandidatureController::class, 'show']); 
 
-    //Annne
-    Route::post('/annees', [AnneeController::class, 'store']); 
     
     
+        
     Route::post('/candidatures/{id}/accepter-entreprise', [CandidatureController::class, 'accepterParEntreprise']);
     Route::post('/candidatures/{id}/refuser-entreprise', [CandidatureController::class, 'refuserParEntreprise']);
     Route::post('/candidatures/{id}/confirmer-etudiant', [CandidatureController::class, 'confirmerParEtudiant']);
     Route::post('/candidatures/{id}/desister-etudiant', [CandidatureController::class, 'desisterParEtudiant']);
-    Route::post('/candidatures/{id}/valider-etablissement', [CandidatureController::class, 'validerParEtablissement']);
+    Route::get('/candidatures/statistics', [CandidatureController::class, 'getStatistics']);
 
     Route::delete('/candidatures/{id}', [CandidatureController::class, 'destroy']); 
-
-    Route::get('/candidatures/statistics', [OffreController::class, 'getStatistics']);
-
    
 
 //Offres
@@ -179,7 +177,8 @@ Route::middleware('auth:sanctum')->group(function (){
     Route::get('/notifications', [NotificationController::class, 'index']); 
     Route::get('/notifications/{id}', [NotificationController::class, 'show']); 
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
-
+    
+Route::get('/notif-all', [NotificationController::class, 'all'])->withoutMiddleware('auth:sanctum'); 
 
 
     
@@ -190,14 +189,6 @@ Route::middleware('auth:sanctum')->group(function (){
 
 
     
-   
-
-    //Tuteur id du tuteur
-    Route::get('/tuteur', [TuteurStageController::class, 'index']);
-    Route::get('/tuteur/{id}', [TuteurStageController::class, 'show']);
-    Route::post('/tuteur', [TuteurStageController::class, 'store']);
-    Route::put('/tuteur/{id}', [TuteurStageController::class, 'update']);
-    Route::delete('/tuteur/{id}', [TuteurStageController::class, 'destroy']);
 
 
     //stages
@@ -229,8 +220,8 @@ Route::middleware('auth:sanctum')->group(function (){
 
         // DELETE /api/messages/{id} (supprimer un message spécifique)
         Route::delete('/{id}', [MessageController::class, 'destroy']);
+        
 
- 
 });
 
 
@@ -245,35 +236,37 @@ Route::middleware('auth:sanctum')->group(function (){
 
 
         // GET /api/profils-commu/{id} (afficher un post spécifique)
-        Route::get('/{profilCommu}', [ProfilCommuController::class, 'show'])->withoutMiddleware('auth:sanctum');
+        Route::get('/{id}', [ProfilCommuController::class, 'show'])->withoutMiddleware('auth:sanctum');
 
 
         // POST /api/profils-commu/{id}/like (pour ajouter un like)
-        Route::post('/{profilCommu}/like', [ProfilCommuController::class, 'ajoutLike']);
+        Route::post('/{id}/like', [ProfilCommuController::class, 'ajoutLike']);
 
         // POST /api/profils-commu/{id}/unlike (pour retirer un like)
-        Route::post('/{profilCommu}/unlike', [ProfilCommuController::class, 'retirerLike']);
-    });
+        Route::post('/{id}/unlike', [ProfilCommuController::class, 'retirerLike']);
+    
 
     //Commentaires
 
     // Routes pour les Commentaires sous les Profils Commu
-        Route::prefix('{profilCommu}/commentaires')->group(function () {
-            // GET /api/profils-commu/{profilCommu}/commentaires (liste les commentaires pour un post)
+        Route::prefix('{id}/commentaires')->group(function () {
+            // GET /api/profils-commu/{id}/commentaires (liste les commentaires pour un post)
             Route::get('/', [CommentaireController::class, 'index'])->withoutMiddleware('auth:sanctum');
 
-            // POST /api/profils-commu/{profilCommu}/commentaires (ajoute un commentaire à un post)
+            // POST /api/profils-commu/{id}/commentaires (ajoute un commentaire à un post)
             Route::post('/', [CommentaireController::class, 'store']);
         });
+
+    });
  
 
     Route::prefix('commentaires')->group(function () {
-        // PUT /api/commentaires/{commentaire} (met à jour un commentaire)
-        Route::put('/{commentaire}', [CommentaireController::class, 'update']);
+        // PUT /api/commentaires/{id} (met à jour un commentaire)
+        Route::put('/{id}', [CommentaireController::class, 'update']);
 
 
-        // DELETE /api/commentaires/{commentaire} (supprime un commentaire)
-        Route::delete('/{commentaire}', [CommentaireController::class, 'destroy']);
+        // DELETE /api/commentaires/{id} (supprime un commentaire)
+        Route::delete('/{id}', [CommentaireController::class, 'destroy']);
     });
 
     //Partenariats
@@ -281,9 +274,9 @@ Route::middleware('auth:sanctum')->group(function (){
     Route::prefix('partenariats')->group(function () {
         Route::get('/', [PartenariatController::class, 'index']); // Liste des partenariats
         Route::post('/', [PartenariatController::class, 'store']); // Envoyer une demande de partenariat 
-        Route::get('/{partenariat}', [PartenariatController::class, 'show']); // Voir les détails d'un partenariat spécifique
-        Route::put('/{partenariat}', [PartenariatController::class, 'update']); // Mettre à jour un partenariat (accepter/refuser par l'Entreprise)
-        Route::delete('/{partenariat}', [PartenariatController::class, 'destroy']); // Supprimer un partenariat
+        Route::get('/{id}', [PartenariatController::class, 'show']); // Voir les détails d'un partenariat spécifique
+        Route::put('/{id}', [PartenariatController::class, 'update']); // Mettre à jour un partenariat (accepter/refuser par l'Entreprise)
+        Route::delete('/{id}', [PartenariatController::class, 'destroy']); // Supprimer un partenariat
     });
 
 

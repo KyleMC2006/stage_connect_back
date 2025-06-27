@@ -9,6 +9,7 @@ use App\Models\Etablissement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class PartenariatController extends Controller
 {
@@ -21,6 +22,17 @@ class PartenariatController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        $today = Carbon::today();
+
+        
+        Partenariat::where('date_fin', '<', $today)
+             ->where('statut', '!=', 'termine') 
+             ->update(['statut' => 'termine']);
+
+        Partenariat::where('date_debut', '<', $today)
+            ->where('statut','en_attente') 
+            ->update(['statut' => 'actif']);
 
         if ($user->role === 'entreprise' && $user->entreprise) {
             $partenariats = Partenariat::where('entreprise_id', $user->entreprise->id)
@@ -67,7 +79,7 @@ class PartenariatController extends Controller
         if ($dejaPartenariat) {
             return response()->json(['message' => 'Une demande de partenariat similaire est déjà en cours ou active.'], 409); // Conflict
         }
-
+        
         $partenariat = Partenariat::create([
             'entreprise_id' => $request->entreprise_id,
             'etablissement_id' => $user->etablissement->id, 
@@ -93,11 +105,18 @@ class PartenariatController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Partenariat $partenariat)
+    public function show($id)
     {
         $user = Auth::user();
 
-        // Seules les entreprises et les établissements impliqués dans ce partenariat peuvent le voir
+        $partenariat = Partenariat::find($id);
+
+        if (!$partenariat) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
+
+        
+
         if (($user->role === 'entreprise' && $user->entreprise->id !== $partenariat->entreprise_id) ||
             ($user->role === 'etablissement' && $user->etablissement->id !== $partenariat->etablissement_id)) {
             return response()->json(['message' => 'Non autorisé à voir ce partenariat.'], 403);
@@ -111,9 +130,15 @@ class PartenariatController extends Controller
      * Update the specified resource in storage.
      * Permet à une Entreprise de modifier le statut d'un partenariat (accepter/refuser).
      */
-    public function update(Request $request, Partenariat $partenariat)
+    public function update(Request $request, $id)
     {
         $user = Auth::user();
+
+        $partenariat = Partenariat::find($id);
+
+        if (!$partenariat) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
 
        
         if ($user->role !== 'entreprise' || !$user->entreprise) {
@@ -126,12 +151,14 @@ class PartenariatController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'statut' => 'required|in:en_attente,actif,termine,suspendu',
+            'statut' => 'sometimes|in:actif,suspendu,inactif',
             'date_debut' => 'sometimes|required|date',
             'date_fin' => 'nullable|date|after_or_equal:date_debut', // Correction: après ou égale
-            'type_partenariat' => 'sometimes|required|in:Stages,Recrutement,R&D,Mécénat',
+            
             
         ]);
+
+    
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
@@ -140,7 +167,7 @@ class PartenariatController extends Controller
         $partenariat->update($request->all());
 
         // Envoyer une notification à l'établissement si le statut change
-        if ($request->has('statut') && $request->statut !== $partenariat->getOriginal('statut')) {
+        if ($request->has('statut')) {
             Notification::create([
                 'user_id' => $partenariat->etablissement->user_id,
                 'type' => 'statut_partenariat_mis_a_jour',
@@ -154,9 +181,15 @@ class PartenariatController extends Controller
     }
 
 
-    public function destroy(Partenariat $partenariat)
+    public function destroy($id)
     {
         $user = Auth::user();
+
+        $partenariat = Partenariat::find($id);
+
+        if (!$partenariat) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
 
         
         if (($user->role === 'entreprise' && $user->entreprise->id !== $partenariat->entreprise_id) ||
@@ -169,3 +202,48 @@ class PartenariatController extends Controller
         return response()->json(['message' => 'Partenariat supprimé avec succès'], 204);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -21,7 +21,7 @@ class Commentaire extends Model
 
     public function profilCommu()
     {
-        return $this->belongsTo(ProfilCommu::class);
+        return $this->belongsTo(ProfilCommu::class, 'profil_commus_id');
     }
 
 

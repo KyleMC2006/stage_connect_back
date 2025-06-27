@@ -19,9 +19,10 @@ class EtablissementController extends Controller
     // GET /api/etablissements
     public function index()
     {
-        $etablissements = Etablissement::all();
-        return response()->json($etablissements);
+        $etablissements = Etablissement::with('user')->get();
+        return response()->json($etablissements, 200);
     }
+
 
     
 

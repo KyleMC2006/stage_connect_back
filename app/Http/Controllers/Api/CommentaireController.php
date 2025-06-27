@@ -18,17 +18,21 @@ class CommentaireController extends Controller
      *  @param  \Illuminate\Http\Request  $request
      */
 
-    public function index(ProfilCommu $profilCommu)
+    
+
+
+    public function store(Request $request, $id)
+    
     {
 
-        $commentaires = $profilCommu->commentaire()->with('user')->orderBy('created_at', 'asc')->get();
+        $user = Auth::user();
+        
+        $profilCommu = ProfilCommu::find($id);
 
-        return response()->json($commentaires, 200);
-    }
+        if (!$profilCommu) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
 
-
-    public function store(Request $request, ProfilCommu $profilCommu)
-    {
         $validator = Validator::make($request->all(), [
             'comment' => 'required|string|max:191', 
         ]);
@@ -49,8 +53,16 @@ class CommentaireController extends Controller
     }
 
 
-    public function update(Request $request, Commentaire $commentaire)
+    public function update(Request $request, $id)
+    
     {
+        $user = Auth::user();
+
+        $commentaire = Commentaire::find($id);
+
+        if (!$commentaire) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
         
         if ($commentaire->user_id !== Auth::id()) {
             return response()->json(['message' => 'Non autorisé à modifier ce commentaire.'], 403);
@@ -69,10 +81,15 @@ class CommentaireController extends Controller
         return response()->json(['message' => 'Commentaire mis à jour avec succès', 'data' => $commentaire], 200);
     }
 
-    public function destroy(Commentaire $commentaire)
+    public function destroy($id)
     {
         $user = Auth::user();
 
+        $commentaire = Commentaire::find($id);
+
+        if (!$commentaire) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
 
         $commentaire->load('profilCommu'); 
 

@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('type',['confirmation','desistement']);
+            $table->string('type')->nullable();
             $table->text('message');
             $table->json('donnees_sup')->nullable();
+            
             $table->timestamps();
         });
     }

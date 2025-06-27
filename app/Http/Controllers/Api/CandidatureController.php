@@ -90,12 +90,27 @@ class CandidatureController extends Controller
     {
         $user = Auth::user();
         $query = Candidature::query();
+        $today = Carbon::today();
 
         switch ($user->role) {
             case 'etudiant':
                 $query->where('etudiant_id', $user->etudiant->id);
                 $query->with('offre.entreprise');
+
+                $candidature = Candidature::where('etudiant_id', $user->etudiant->id)->where('statut','confirmee')->first();
+
+
+                if ($candidature){
+                    $stage = Stage::where('etudiant_id',$candidature->etudiant_id)
+                    ->where('offre_id',$candidature->offre_id)->first();
+
+                    if ($stage->date_fin < $today){
+                        $candidature->update(['statut' => 'expiree']);
+                    }
+                }
+                 
                 break;
+
             case 'entreprise':
                 $query->whereHas('offre', function ($q) use ($user) {
                     $q->where('entreprise_id', $user->entreprise->id);
@@ -104,7 +119,7 @@ class CandidatureController extends Controller
                 break;
             case 'etablissement':
                 $query->whereHas('etudiant', function ($q) use ($user) {
-                    $q->where('etablissement_id', $user->etablissement->id);
+                    $q->where('id_etablissement', $user->etablissement->id);
                 });
                 $query->with('etudiant.user', 'etudiant.etablissement', 'offre.entreprise');
                 break;
@@ -135,7 +150,10 @@ class CandidatureController extends Controller
         $user = Auth::user();
         $authorized = false;
 
-        // Vérification d'autorisation
+
+
+
+        
         if ($user->role === 'etudiant' && $candidature->etudiant->user_id === $user->id) {
             $authorized = true;
         } elseif ($user->role === 'entreprise' && $candidature->offre->entreprise->user_id === $user->id) {
@@ -229,9 +247,6 @@ class CandidatureController extends Controller
     }
 
     /**
-     * L'étudiant confirme son choix pour une candidature acceptée par l'entreprise.
-     * Statut de : `en_attente_confirmation_etudiant` vers `en_attente_validation_etablissement`.
-     * Lance le délai de 48h pour la validation de l'établissement.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id L'ID de la candidature.
@@ -256,7 +271,7 @@ class CandidatureController extends Controller
 
         
         $Autresconfirmations = Candidature::where('etudiant_id', $candidature->etudiant_id)
-                                        ->whereIn('statut', ['confirmee_etudiant', 'en_attente_validation_etablissement', 'validee_etablissement'])
+                                        ->where('statut', 'confirmee')
                                         ->where('id', '!=', $candidature->id)
                                         ->exists();
         if ($Autresconfirmations) {
@@ -265,9 +280,21 @@ class CandidatureController extends Controller
 
 
         $candidature->update([
-            'statut' => 'en_attente_validation_etablissement',
+            'statut' => 'confirmee',
             'date_confirmation_etudiant' => Carbon::now(),
         ]);
+
+        // CRÉATION DU STAGE
+            $stage = Stage::create([
+                'etudiant_id' => $candidature->etudiant_id,
+                'offre_id' => $candidature->offre_id,
+                'statut' => 'en_attente',
+                'date_debut' => $candidature->offre->date_debut, 
+                'date_fin' => Carbon::parse($candidature->offre->date_debut)->addWeeks($candidature->offre->duree_en_semaines),
+                
+            ]);
+
+
 
 
         Notification::create([
@@ -278,8 +305,8 @@ class CandidatureController extends Controller
         ]);
         Notification::create([
             'user_id' => $candidature->etudiant->etablissement->user->id, // Notifier l'établissement
-            'type' => 'candidature_a_valider',
-            'message' => 'Une candidature de votre étudiant ' . $user->name . ' est en attente de votre validation.',
+            'type' => 'candidature_valider',
+            'message' => 'Une candidature de votre étudiant ' . $user->name . ' vient d"/etre confirmé par celui ci .',
             'donnees_sup' => ['candidature_id' => $candidature->id]
         ]);
 
@@ -287,9 +314,6 @@ class CandidatureController extends Controller
     }
 
     /**
-     * L'étudiant se désiste d'une candidature.
-     * Statut de : tout statut (sauf terminé ou refusé) vers `desistement_etudiant`.
-     * 
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id L'ID de la candidature.
@@ -309,7 +333,7 @@ class CandidatureController extends Controller
         }
 
         
-        if (in_array($candidature->statut, ['validee_etablissement', 'refusee', 'desistement_etudiant'])) {
+        if ($candidature->statut !== 'acceptee'){
             return response()->json(['message' => 'Cette candidature ne peut plus être désistée manuellement ou est déjà désistée/refusée.'], 400);
         }
 
@@ -323,122 +347,33 @@ class CandidatureController extends Controller
 
     
         $candidature->update([
-            'statut' => 'desistement_etudiant',
+            'statut' => 'desistement_demande',
             'justificatif_desistement' => $request->justificatif_desistement,
         ]);
 
         Notification::create([
-            'user_id' => $candidature->offre->entreprise->user->id, // Notifier l'entreprise
+            'user_id' => $candidature->offre->entreprise->user->id, 
             'type' => 'candidature_desistement_etudiant',
             'message' => 'L\'étudiant ' . $user->name . ' s\'est désisté de sa candidature pour votre offre "' . $candidature->offre->titre . '".',
             'donnees_sup' => ['candidature_id' => $candidature->id]
         ]);
+
         Notification::create([
-            'user_id' => $candidature->etudiant->etablissement->user->id, // Notifier l'établissement
+            'user_id' => $candidature->etudiant->etablissement->user->id, 
             'type' => 'candidature_desistement_etudiant',
-            'message' => 'Votre étudiant ' . $user->name . ' s\'est désisté d\'une candidature.',
+            'message' => 'L\'étudiant ' . $user->name . ' s\'est désisté de sa candidature pour une offre: "' . $candidature->offre->titre . '".',
             'donnees_sup' => ['candidature_id' => $candidature->id]
         ]);
-
+        
         return response()->json(['message' => 'Candidature désistée avec succès. Justificatif enregistré.', 'candidature' => $candidature], 200);
     }
 
     /**
-     * L'établissement valide (ou refuse) le choix d'un étudiant.
-     * Statut de : `en_attente_validation_etablissement` vers `validee_etablissement` (ou `'refusee_etablissement'` si refus).
-     * Si validation réussie, création du `Stage`.
-     *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id L'ID de la candidature.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function validerParEtablissement(Request $request, $id)
-    {
-        $candidature = Candidature::find($id);
-
-        if (!$candidature) {
-            return response()->json(['message' => 'Candidature non trouvée'], 404);
-        }
-
-        $user = Auth::user();
-        // Vérifier que l'utilisateur est un établissement et que c'est bien l'établissement de l'étudiant concerné
-        if ($user->role !== 'etablissement' || $candidature->etudiant->etablissement->user_id !== $user->id) {
-            return response()->json(['message' => 'Non autorisé à effectuer cette action.'], 403);
-        }
-
-       
-
-        $validator = Validator::make($request->all(), [
-            'action' => 'required|in:valider,refuser', // L'établissement peut valider ou refuser
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        if ($request->action === 'valider') {
-
-             if ($candidature->statut !== 'en_attente_validation_etablissement') {
-                return response()->json(['message' => 'La candidature doit être en statut "en_attente_validation_etablissement" pour être validée.'], 400);
-            }
-            $candidature->update([
-                'statut' => 'validee_etablissement',
-                'date_validation_etablissement' => Carbon::now(),
-            ]);
-
-            // CRÉATION DU STAGE
-            $stage = Stage::create([
-                'etudiant_id' => $candidature->etudiant_id,
-                'offre_id' => $candidature->offre_id,
-                'statut' => 'en_attente',
-                'date_debut' => $candidature->offre->date_debut, 
-                'date_fin' => Carbon::parse($candidature->offre->date_debut)->addWeeks($candidature->offre->duree_en_semaines),
-                
-            ]);
-
-            Notification::create([
-                'user_id' => $candidature->etudiant->user->id,
-                'type' => 'stage_valide_etablissement',
-                'message' => 'Votre stage pour l\'offre "' . $candidature->offre->titre . '" a été validé par votre établissement !',
-                'donnees_sup' => ['candidature_id' => $candidature->id, 'stage_id' => $stage->id]
-            ]);
-            Notification::create([
-                'user_id' => $candidature->offre->entreprise->user->id,
-                'type' => 'candidature_validee_etablissement',
-                'message' => 'La candidature de ' . $candidature->etudiant->user->name . ' pour votre offre "' . $candidature->offre->titre . '" a été validée par son établissement. Un stage a été créé.',
-                'donnees_sup' => ['candidature_id' => $candidature->id, 'stage_id' => $stage->id]
-            ]);
-
-            return response()->json(['message' => 'Candidature validée par l\'établissement. Un stage a été créé.', 'candidature' => $candidature, 'stage' => $stage], 200);
-
-        } elseif ($request->action === 'refuser') {
-
-            if ($candidature->statut !== 'desistement_etudiant') {
-                return response()->json(['message' => 'La candidature doit être en statut  "desistement_etudiant" pour être refusée par l\'établissement.'], 400);
-            }
-
-
-            $candidature->update([
-                'statut' => 'refusee_etablissement', 
-                'date_validation_etablissement' => Carbon::now(),
-            ]);
-
-            Notification::create([
-                'user_id' => $candidature->etudiant->user->id,
-                'type' => 'candidature_refusee_etablissement',
-                'message' => 'Votre établissement a refusé de valider votre candidature pour l\'offre "' . $candidature->offre->titre . '". La candidature est annulée.',
-                'donnees_sup' => ['candidature_id' => $candidature->id]
-            ]);
-            Notification::create([
-                'user_id' => $candidature->offre->entreprise->user->id,
-                'type' => 'candidature_refusee_etablissement',
-                'message' => 'L\'établissement de l\'étudiant ' . $candidature->etudiant->user->name . ' a refusé de valider la candidature pour votre offre "' . $candidature->offre->titre . '".',
-                'donnees_sup' => ['candidature_id' => $candidature->id]
-            ]);
-
-            return response()->json(['message' => 'Candidature refusée par l\'établissement.', 'candidature' => $candidature], 200);
-        }
-    }
+    
 
 
     
@@ -453,7 +388,7 @@ class CandidatureController extends Controller
         $user = Auth::user();
         $authorized = false;
 
-        // Seul l'étudiant peut supprimer sa candidature si elle est encore "en attente entreprise"
+        // Seul l'étudiant peut supprimer sa candidature si elle est encore "en attente "
         if ($user->role === 'etudiant' && $candidature->etudiant->user_id === $user->id && $candidature->statut === 'en_attente_entreprise') {
             $authorized = true;
         }

@@ -16,16 +16,21 @@ class NotificationController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index(Request $request)
+    public function index()
     {
         $user = Auth::user();
 
         $query = $user->notifications(); 
 
         
-        $notifications = $user->notifications->latest()->paginate(15);
+        $notifications = $user->notifications()->latest()->paginate(15);
 
         return response()->json($notifications, 200);
+    }
+
+    public function all(){
+     $notifications = Notification::all();
+     return response()->json($notifications)
     }
 
     /**
@@ -64,5 +69,25 @@ class NotificationController extends Controller
         $notification->delete();
 
         return response()->json(['message' => 'Notification supprimée avec succès'], 200);
+    }
+
+    public function countUnreadNotifications()
+    {
+        // 1. Récupérer l'utilisateur authentifié
+        $user = Auth::user();
+
+        // 2. Vérifier si un utilisateur est authentifié
+        if (!$user) {
+            return response()->json(['message' => 'Utilisateur non authentifié.'], 401); // Unauthorized
+        }
+
+        // 3. Compter les notifications où 'is_read' est false
+        // La méthode `notifications()` retourne le query builder pour les notifications de cet utilisateur.
+        $unreadCount = $user->notifications()->where('is_read', false)->count();
+
+        return response()->json([
+            'message' => 'Nombre de notifications non lues pour l\'utilisateur ' . $user->name,
+            'count' => $unreadCount
+        ], 200);
     }
 }

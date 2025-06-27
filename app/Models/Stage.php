@@ -9,7 +9,7 @@ class Stage extends Model
 {   
     use HasFactory;
     protected $fillable = [
-        'etudiant_id', 'offre_id', 'tuteur_stage_id',
+        'etudiant_id', 'offre_id',
         'date_debut', 'date_fin', 'statut', 
         'rapport_stage', 'note_stage', 'commentaire_note'
     ];
@@ -18,6 +18,7 @@ class Stage extends Model
         'date_debut' => 'date',
         'date_fin' => 'date',
     ];
+    
     
     
     protected $table = 'stages';
@@ -32,10 +33,7 @@ class Stage extends Model
         return $this->belongsTo(Offre::class);
     }
     
-    public function tuteurStage()
-    {
-        return $this->belongsTo(TuteurStage::class);
-    }
+    
     
     
     public function scopeEnCours($query)

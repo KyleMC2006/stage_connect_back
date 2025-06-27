@@ -19,10 +19,7 @@ return new class extends Migration
             $table->foreignId('offre_id')
                 ->constrained('offres')
                 ->onDelete('cascade');
-            $table->foreignId('tuteur_stage_id')
-                ->nullable()
-                ->constrained('tuteur_stages')
-                ->onDelete('set null');
+            
             $table->date('date_debut');
             $table->date('date_fin');
             $table->enum('statut', ['en_cours', 'termine', 'suspendu','en_attente'])

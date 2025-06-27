@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
+
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator; 
-
+use App\Models\User;
 use App\Models\Etudiant;
 use App\Models\Etablissement;
 use App\Models\Entreprise;
@@ -71,16 +72,13 @@ class UserController extends Controller
                 // --- DÉBUT DE LA LOGIQUE D'UPLOAD DU CV ---
                 if ($request->hasFile('CV')) {
                     $file = $request->file('CV');
-                    // Générer un nom de fichier unique et sécurisé pour le CV
-                    // Par exemple: user_ID_timestamp.pdf
+                    
                     $fileName = $user->id . '_cv_' . time() . '.' . $file->getClientOriginalExtension();
 
-                    // Définir le chemin de stockage. Ex: 'cvs/user_123/mon_cv.pdf'
-                    // 'public' signifie que le fichier sera stocké dans storage/app/public/cvs/user_ID/
+                    
                     $path = $file->storeAs('cvs/' . $user->id, $fileName, 'public');
 
-                    // Sauvegarder le chemin accessible publiquement dans la base de données
-                    // Laravel Storage::url() génère une URL publique pour un fichier stocké dans 'public' disk
+                    
                     $profileData['CV'] = Storage::url($path);
 
                     // Si l'étudiant a déjà un CV et que c'est une mise à jour, supprimez l'ancien fichier
@@ -356,11 +354,10 @@ class UserController extends Controller
             return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
         }
 
-        // TEMPORARY DEBUGGING LINE
+        // Log pour véruier l"authentifictaion
     \Log::info('APP_URL from config: ' . config('app.url'));
     \Log::info('Default Filesystem Disk Root: ' . Storage::disk('public')->path(''));
-    // END TEMPORARY DEBUGGING LINES
-
+    
         // Charger les relations basées sur le rôle de l'utilisateur
         switch ($user->role) {
             case 'etudiant':
@@ -394,6 +391,7 @@ class UserController extends Controller
         if ($user->role === 'etudiant' && $user->etudiant) {
             $profileData['name'] = $user->etudiant->nom_etudiant ?? $user->name;
             $profileData['role_details'] = [
+                'etudiant_id' => $user->etudiant->id,
                 'matricule' => $user->etudiant->matricule,
                 'projets' => $user->etudiant->projets,
                 'competences' => $user->etudiant->competences,
@@ -421,6 +419,7 @@ class UserController extends Controller
         } elseif ($user->role === 'etablissement' && $user->etablissement) {
             $profileData['name'] = $user->etablissement->nom_etablissement;
             $profileData['role_details'] = [
+                'etablissement_id' => $user->etablissement->id,
                 'siteweb' => $user->etablissement->siteweb,
                 'adresse' => $user->etablissement->adresse,
                 'ville_id' => $user->etablissement->ville_id,
@@ -431,6 +430,7 @@ class UserController extends Controller
         } elseif ($user->role === 'entreprise' && $user->entreprise) {
             $profileData['name'] = $user->entreprise->nom_entreprise;
             $profileData['role_details'] = [
+                'entreprise_id' => $user->entreprise->id,
                 'email_entreprise' => $user->entreprise->email_entreprise,
                 'siteweb' => $user->entreprise->siteweb,
                 'adresse' => $user->entreprise->adresse,
@@ -446,8 +446,13 @@ class UserController extends Controller
     }
 
 
-    public function showUserProfile(User $user)
+    public function showUserProfile($id)
     {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
 
         switch ($user->role) {
             case 'etudiant':
@@ -508,7 +513,6 @@ class UserController extends Controller
                 'email_entreprise' => $user->entreprise->email_entreprise, 
                 'siteweb' => $user->entreprise->siteweb,
                 'adresse' => $user->entreprise->adresse, 
-              
                 'domaine' => $user->entreprise->domaine ? $user->entreprise->domaine->toArray() : null,
                 'ville' => $user->entreprise->ville ? $user->entreprise->ville->toArray() : null,
             ];

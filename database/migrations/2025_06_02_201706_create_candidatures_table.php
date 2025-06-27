@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('offre_id')
                 ->constrained('offres')
                 ->onDelete('cascade');
-            $table->enum('statut', ['en_attente', 'acceptee', 'refusee','refusee_etablissement', 'en_attente_validation_etablissement', 'validee_etablissement','desistement_etudiant'])
+            $table->enum('statut', ['en_attente', 'acceptee', 'refusee','expiree','confirmee','desistement_etudiant'])
                 ->default('en_attente');
             $table->date('date_postulat');
             $table->text('lettre_motivation')->nullable();

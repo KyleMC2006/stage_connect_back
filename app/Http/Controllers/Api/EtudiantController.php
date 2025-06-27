@@ -19,7 +19,7 @@ class EtudiantController extends Controller
     // Liste tous les étudiants
     public function index()
     {
-        $etudiants = Etudiant::all();
+        $etudiants = Etudiant::with(['user', 'filiere','filannee.annee'])->get();
         return response()->json($etudiants);
     }
 
@@ -64,6 +64,8 @@ class EtudiantController extends Controller
         $cvPath = $request->file('CV')->store('cvs', 'public');
         $etudiant->CV = $cvPath;
     }
+
+    
 
     $data = $request->except('CV');
     $data['CV'] = $etudiant->CV;

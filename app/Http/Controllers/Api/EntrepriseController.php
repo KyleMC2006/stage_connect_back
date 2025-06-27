@@ -18,7 +18,7 @@ class EntrepriseController extends Controller
     // Affiche la liste des entreprises
     public function index()
     {
-        $entreprises = Entreprise::all();
+        $entreprises = Entreprise::with(['ville', 'domaine'])->get();
         return response()->json($entreprises, 200);
     }
 

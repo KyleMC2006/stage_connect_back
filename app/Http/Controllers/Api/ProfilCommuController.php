@@ -17,23 +17,24 @@ class ProfilCommuController extends Controller
      * @return \Illuminate\Http\JsonResponse
      *  @param  \Illuminate\Http\Request  $request
      */
-    public function __construct()
-    {
-        // Les utilisateurs non authentifiés peuvent voir les posts, mais pas les créer, liker ou supprimer.
-        $this->middleware('auth:sanctum')->except(['index', 'show']);
-    }
-
+    
     /**
 
      * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
-        
-        $profilCommus = ProfilCommu::with(['user', 'commentaire.user'])
-                                  ->orderBy('created_at', 'desc')
-                                  ->get();
+        // Charge les ProfilCommu
+        $profilCommus = ProfilCommu::with([
+            'user' => function ($query) {
+                
+                $query->with(['etudiant', 'etablissement', 'entreprise']);
+            },
+            'commentaire.user' 
+        ])->get();
 
+      
+        
         return response()->json($profilCommus, 200);
     }
 
@@ -55,8 +56,13 @@ class ProfilCommuController extends Controller
     }
 
 
-    public function show(ProfilCommu $profilCommu)
+    public function show($id)
     {
+        $profilCommu = ProfilCommu::find($id);
+
+        if (!$profilCommu) {
+            return response()->json(['message' => 'Utilisaterur non trouvée'], 404);
+        }
         // Charge l'utilisateur qui a posté et les commentaires avec leurs utilisateurs associés.
         $profilCommu->load(['user', 'commentaire.user']);
         return response()->json($profilCommu, 200);
@@ -75,31 +81,72 @@ class ProfilCommuController extends Controller
         }
 
         $profilCommu->delete();
-
         return response()->json(['message' => 'Post communautaire supprimé avec succès'], 204);
     }
 
 
-    public function ajoutLike(ProfilCommu $profilCommu)
+    public function ajoutLike($id)
     {
-        
-        // Idée a inclure : table pivots likes
-        $profilCommu->increment('likes'); // Incrémente le compteur 'likes'
+        $profilCommu = ProfilCommu::find($id);
 
-
-        return response()->json(['message' => 'Like ajouté avec succès', 'data' => $profilCommu], 200);
-    }
-
-    public function retirerLike(ProfilCommu $profilCommu)
-    {
-        // Décrémente le compteur 'likes'.
-        // Assurez-vous que le compteur ne descend pas en dessous de zéro.
-        if ($profilCommu->likes > 0) {
-            $profilCommu->decrement('likes');
-        } else {
-            return response()->json(['message' => 'Le nombre de likes est déjà à zéro.'], 400);
+        if (!$profilCommu) {
+            return response()->json(['message' => 'Post communautaire non trouvé.'], 404);
         }
 
-        return response()->json(['message' => 'Like retiré avec succès', 'data' => $profilCommu], 200);
+        $userId = Auth::id(); // L'ID de l'utilisateur authentifié
+
+        // Vérifier si l'utilisateur est authentifié
+        if (!$userId) {
+            return response()->json(['message' => 'Authentification requise pour aimer un post.'], 401);
+        }
+
+        // Vérifier si l'utilisateur a déjà liké ce post en utilisant la méthode sur le modèle
+        if ($profilCommu->isLikedByUser($userId)) {
+            return response()->json(['message' => 'Vous avez déjà liké ce post.'], 409); // 409 Conflict
+        }
+
+        // Ajouter une entrée dans la table pivot
+        // La méthode `attach()` ajoute une relation.
+        // Puisque la clé primaire composée dans la migration assure l'unicité, pas besoin de vérification supplémentaire ici,
+        // mais nous l'avons fait avant pour un message d'erreur clair.
+        $profilCommu->likers()->attach($userId);
+
+        // Incrémente le compteur 'likes' sur le modèle ProfilCommu
+        $profilCommu->increment('likes');
+
+        return response()->json(['message' => 'Like ajouté avec succès.', 'data' => $profilCommu], 200);
+    }
+
+    public function retirerLike($id)
+    {
+        $profilCommu = ProfilCommu::find($id);
+
+        if (!$profilCommu) {
+            return response()->json(['message' => 'Post communautaire non trouvé.'], 404);
+        }
+
+        $userId = Auth::id(); // L'ID de l'utilisateur authentifié
+
+        // Vérifier si l'utilisateur est authentifié
+        if (!$userId) {
+            return response()->json(['message' => 'Authentification requise pour retirer un like.'], 401);
+        }
+
+        // Vérifier si l'utilisateur a effectivement liké ce post (si l'entrée existe dans la pivot)
+        if (!$profilCommu->isLikedByUser($userId)) {
+            return response()->json(['message' => 'Vous n\'avez pas liké ce post, vous ne pouvez pas retirer le like.'], 400); // 400 Bad Request
+        }
+
+        // Retirer l'entrée de la table pivot
+        // La méthode `detach()` supprime la relation. Elle retourne le nombre de lignes supprimées.
+        $detachedCount = $profilCommu->likers()->detach($userId);
+
+        // Décrémente le compteur 'likes' seulement si une ligne a été effectivement retirée et qu'il est supérieur à zéro.
+        // La condition `if ($detachedCount)` est redondante si `isLikedByUser` est vrai, mais sécuritaire.
+        if ($profilCommu->likes > 0) {
+            $profilCommu->decrement('likes');
+        }
+
+        return response()->json(['message' => 'Like retiré avec succès.', 'data' => $profilCommu], 200);
     }
 }

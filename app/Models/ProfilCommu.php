@@ -18,7 +18,7 @@ class ProfilCommu extends Model
 
     public function commentaire()
     {
-        return $this->hasMany(Commentaire::class);
+        return $this->hasMany(Commentaire::class, 'profil_commus_id');
     }
 
 }

@@ -14,6 +14,7 @@ class Notification extends Model
 
     protected $casts = [
         'donnees_sup' => 'array',
+        'is_read' => 'boolean',
     ];
 
     public function user(){

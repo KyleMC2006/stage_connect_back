@@ -22,12 +22,12 @@ return new class extends Migration
             $table->string('CV')->nullable();
             $table->foreignId('id_etablissement')
             ->references('id')
-            ->on('etablissement');
+            ->on('etablissements');
             $table->text('projets')->nullable();
             $table->foreignId('id_filiere')
             ->references('id')
             ->on('filieres');
-            $table->foreignId('filannee_id')->constrained()->onDelete('cascade');
+            $table->foreignId('filannee_id')->constrained();
             $table->string('matricule')->unique();
             $table->timestamps();
         });

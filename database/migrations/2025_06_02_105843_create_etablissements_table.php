@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('etablissements', function (Blueprint $table) {
+        Schema::create('etablissements', function (Blueprint $table){
             $table->id();
             $table->foreignId('user_id')
             ->references('id')
@@ -23,8 +23,7 @@ return new class extends Migration
             $table->string('numero_agrement')->unique();
             $table->foreignId('ville_id')
             ->references('id')
-            ->on('villes')
-            ->onDelete('set null');
+            ->on('villes');
             $table->timestamps();
         });
     }

@@ -31,7 +31,7 @@ class Etudiant extends Model
     }
     
     public function etablissement(){
-        return $this->belongsTo(Etablissement::class);
+        return $this->belongsTo(Etablissement::class,'id_etablissement');
     }
 
     public function filiere(){

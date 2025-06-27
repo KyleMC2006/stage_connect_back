@@ -37,7 +37,6 @@ class MessageController extends Controller
         foreach ($usersIds as $participantId) {
             $participant = User::find($participantId);
             if ($participant) {
-                // Récupérer le dernier message échangé entre l'utilisateur actuel et ce participant
                 $lastMessage = Message::where(function (Builder $query) use ($user, $participant) {
                                     $query->where('expediteur_id', $user->id)
                                           ->where('destinataire_id', $participant->id);
@@ -72,7 +71,6 @@ class MessageController extends Controller
             }
         }
 
-        // Tri des conversations par la date du dernier message, les plus récentes en premier
         usort($conversations, function($a, $b) {
             $dateA = $a['last_message'] ? $a['last_message']['created_at'] : null;
             $dateB = $b['last_message'] ? $b['last_message']['created_at'] : null;
@@ -81,7 +79,7 @@ class MessageController extends Controller
             if ($dateA === null) return 1;
             if ($dateB === null) return -1;
 
-            return $dateB <=> $dateA; // Trie par date décroissante
+            return $dateB <=> $dateA; 
         });
 
 
@@ -91,6 +89,8 @@ class MessageController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        
         $validator = Validator::make($request->all(), [
             'destinataire_id' => 'required|exists:users,id',
             'contenu' => 'required|string',
@@ -124,7 +124,7 @@ class MessageController extends Controller
     {
         $user = Auth::user();
 
-        // Récupérer tous les messages entre l'utilisateur authentifié et $otherUser
+        
         $messages = Message::where(function (Builder $query) use ($user, $otherUser) {
                                 $query->where('expediteur_id', $user->id)
                                       ->where('destinataire_id', $otherUser->id);
@@ -134,10 +134,10 @@ class MessageController extends Controller
                                       ->where('destinataire_id', $user->id);
                             })
                             ->orderBy('created_at', 'asc') // Tri chronologique
-                            ->with(['expediteur', 'destinataire']) // Charger les relations pour l'affichage
+                            ->with(['expediteur', 'destinataire']) 
                             ->get();
 
-        // Marquer tous les messages reçus de cet 'otherUser' par 'user' comme lus
+        
         Message::where('expediteur_id', $otherUser->id)
                ->where('destinataire_id', $user->id)
                ->where('lu', false)

@@ -7,11 +7,12 @@ use App\Models\Stage;
 use App\Models\Etudiant;
 use App\Models\Offre;
 use App\Models\TuteurStage;
-use App\Models\User; // Pour accéder au rôle de l'utilisateur authentifié
+use App\Models\User; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage; // Pour la gestion des fichiers
+use Carbon\Carbon; 
 
 class StageController extends Controller
 {
@@ -24,7 +25,19 @@ class StageController extends Controller
      */
     public function index()
     {
-        $stages = Stage::with(['etudiant.user', 'offre.entreprise.user', 'tuteurStage'])->get();
+        $today = Carbon::today();
+
+        
+        Stage::where('date_fin', '<', $today)
+             ->where('statut', '!=', 'termine') 
+             ->update(['statut' => 'termine']);
+
+        Stage::where('date_debut', '<', $today)
+            ->where('statut','en_attente') 
+            ->update(['statut' => 'en_cours']);
+
+        
+        $stages = Stage::with(['etudiant.user','etudiant.filiere','etudiant.filannee', 'offre.entreprise.user'])->get();
 
 
         return response()->json($stages, 200);
@@ -43,13 +56,11 @@ class StageController extends Controller
   
     public function show($id)
     {
-        $stage = Stage::with(['etudiant.user', 'offre.entreprise.user', 'tuteurStage'])->find($id);
+        $stage = Stage::with(['etudiant.user','etudiant.filiere','etudiant.filannee', 'offre.entreprise.user']);->find($id);
 
         if (!$stage) {
             return response()->json(['message' => 'Stage non trouvé'], 404);
         }
-
-
 
         return response()->json($stage, 200);
     }
@@ -67,12 +78,10 @@ class StageController extends Controller
 
         $validator = Validator::make($request->all(), [
 
-            'tuteur_stage_id' => 'nullable|sometimes|exists:tuteur_stages,id',
-            'date_fin' => 'sometimes|date|after_or_equal:date_debut',
             'statut' => 'sometimes|string|in:en_attente,en_cours,termine,suspendu', 
             'note_stage' => 'nullable|sometimes|numeric|min:0|max:20',
             'commentaire_note' => 'nullable|sometimes|string',
-            'rapport_stage' => 'nullable|sometimes|file|mimes:pdf,doc,docx|max:10240', // Max 10MB
+            'rapport_stage' => 'nullable|sometimes|file|mimes:pdf,doc,docx|max:10240', 
         ]);
 
         if ($validator->fails()) {
@@ -94,10 +103,6 @@ class StageController extends Controller
             if ($user->role === 'entreprise') {
                  if ($user->entreprise->id !== $stage->offre->entreprise_id) {
                     return response()->json(['message' => 'Non autorisé. Vous ne pouvez noter que les stages liés à vos offres.'], 403);
-                }
-            } elseif ($user->role === 'tuteur_stage') { 
-                if ($user->tuteurStage->id !== $stage->tuteur_stage_id) {
-                    return response()->json(['message' => 'Non autorisé. Vous ne pouvez noter que les stages dont vous êtes le tuteur.'], 403);
                 }
             } 
         }

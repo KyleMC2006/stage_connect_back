@@ -30,6 +30,7 @@ class User extends Authenticatable
         'is_active',
 
     ];
+    protected $table = 'users';
 
     protected $guarded = ['role'];
 
